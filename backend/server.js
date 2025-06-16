@@ -1,38 +1,35 @@
-// backend/server.js
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const dotenv = require("dotenv");
-const userRoutes = require("./routes/userRoutes");
-const errorHandler = require("./middleware/errorHandler");
-
-dotenv.config();
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const userRoutes = require('./routes/userRoutes');
+require('dotenv').config();
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // Parse JSON request bodies
 
 // Routes
-app.use("/users", userRoutes);
-
-// Error Handler (keep this after all routes)
-app.use(errorHandler);
+app.use('/api/users', userRoutes);
 
 // MongoDB Connection
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/kvsb_db';
+
+app.use(errorHandler)
+
 mongoose
-  .connect(process.env.MONGO_URI, {
-    dbName: "kvsbDB",
+  .connect(MONGO_URI, {
+    // useNewUrlParser and useUnifiedTopology are deprecated in Mongoose v6+
   })
   .then(() => {
-    console.log(" Connected to MongoDB");
+    console.log(' MongoDB connected');
     app.listen(PORT, () => {
       console.log(` Server is running on http://localhost:${PORT}`);
     });
   })
-  .catch((err) => {
-    console.error(" MongoDB connection failed:", err.message);
-    process.exit(1);
+  .catch((error) => {
+    console.error(' MongoDB connection failed:', error.message);
   });

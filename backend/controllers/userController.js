@@ -1,89 +1,114 @@
-const User = require("../models/userModel.js");
+const {
+  User,
+  Individual,
+  Proprietor,
+  Firm,
+  LLP,
+  Corporate,
+} = require("../models/userModel");
 
-// Create a new user
-exports.createUser = async (req, res) => {
+// Map client type to model
+const getModelByClientType = (clientType) => {
+  const modelMap = {
+    Individual,
+    Proprietor,
+    Firm,
+    LLP,
+    Corporate,
+  };
+  return modelMap[clientType] || null;
+};
+
+// =======================
+// CREATE
+// =======================
+const createUser = async (req, res) => {
   try {
-    const { clientType, data } = req.body;
+    const { clientType, ...rest } = req.body;
+    const Model = getModelByClientType(clientType);
 
-    if (!clientType || !data) {
-      return res.status(400).json({ message: "clientType and data are required" });
+    if (!Model) {
+      return res.status(400).json({ error: "Invalid client type" });
     }
 
-    const user = await User.create({ clientType, data });
-    res.status(201).json(user);
+    const newUser = new Model({ clientType, ...rest });
+    await newUser.save();
+
+    return res.status(201).json({ message: "User created", user: newUser });
   } catch (error) {
-    console.error("Create user error:", error);
-    res.status(500).json({ message: "Server error while creating user" });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// Get all users (optional search and filter)
-exports.getUsers = async (req, res) => {
+// =======================
+// READ ALL
+// =======================
+const getAllUsers = async (req, res) => {
   try {
-    const { search, clientType } = req.query;
-    let query = {};
-
-    if (clientType) {
-      query.clientType = clientType;
-    }
-
-    if (search) {
-      // Search in multiple possible name fields
-      query.$or = [
-        { "data.clientName": { $regex: search, $options: "i" } },
-        { "data.businessName": { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const users = await User.find(query).sort({ createdAt: -1 });
-    res.json(users);
+    const users = await User.find();
+    return res.status(200).json(users);
   } catch (error) {
-    console.error("Get users error:", error);
-    res.status(500).json({ message: "Server error while fetching users" });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// Update a user by ID
-exports.updateUser = async (req, res) => {
+// =======================
+// READ BY ID
+// =======================
+const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { clientType, data } = req.body;
-
-    if (!clientType || !data) {
-      return res.status(400).json({ message: "clientType and data are required" });
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      { clientType, data },
-      { new: true }
-    );
+    return res.status(200).json(user);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// =======================
+// UPDATE
+// =======================
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedUser = await User.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
 
     if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(updatedUser);
+    return res.status(200).json({ message: "User updated", user: updatedUser });
   } catch (error) {
-    console.error("Update user error:", error);
-    res.status(500).json({ message: "Server error while updating user" });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// Delete a user by ID
-exports.deleteUser = async (req, res) => {
+// =======================
+// DELETE
+// =======================
+const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-
     const deletedUser = await User.findByIdAndDelete(id);
-
     if (!deletedUser) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ error: "User not found" });
     }
-
-    res.json({ message: "User deleted successfully" });
+    return res.status(200).json({ message: "User deleted" });
   } catch (error) {
-    console.error("Delete user error:", error);
-    res.status(500).json({ message: "Server error while deleting user" });
+    return res.status(500).json({ error: error.message });
   }
+};
+
+module.exports = {
+  createUser,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
 };

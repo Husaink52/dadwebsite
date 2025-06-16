@@ -1,41 +1,111 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-const accountantSchema = new mongoose.Schema({
-  name: { type: String },
-  email: { type: String },
-}, { _id: false });
+// Base schema
+const baseOptions = {
+  discriminatorKey: 'clientType', // key that differentiates models
+  collection: 'users',
+  timestamps: true,
+};
 
-const gstEntrySchema = new mongoose.Schema({
-  state: { type: String },
-  gst: { type: String },
-}, { _id: false });
+const UserSchema = new Schema({}, baseOptions);
+const User = mongoose.model('User', UserSchema);
 
-const userSchema = new mongoose.Schema({
-  clientType: {
-    type: String,
-    required: true,
-    enum: ['individual', 'proprietor', 'firm', 'llp', 'corporate'],
-  },
+// =====================
+// Discriminator Schemas
+// =====================
 
-  data: {
-    // Common Fields
-    clientName: String,         // For individual & proprietor
-    businessName: String,       // For business types
-    contact: String,
+// 1. Individual
+const IndividualSchema = new Schema({
+  clientName: String,
+  contactNo: String,
+  email: String,
+  panNo: String,
+  aadharNo: String,
+});
+const Individual = User.discriminator('Individual', IndividualSchema);
+
+// 2. Proprietor
+const ProprietorSchema = new Schema({
+  clientName: String,
+  businessName: String,
+  contactNo: String,
+  email: String,
+  panNo: String,
+  tanNo: String,
+  gstNo: String,
+});
+const Proprietor = User.discriminator('Proprietor', ProprietorSchema);
+
+// 3. Firm
+const FirmSchema = new Schema({
+  businessName: String,
+  businessPan: String,
+  tanNo: String,
+  gstNo: String,
+  contactNo: String,
+  address: String,
+  accountant1: {
+    name: String,
     email: String,
-    address: String,
-
-    // Identification Numbers
-    pan: String,
-    aadhar: String,             // For individual only
-    tan: String,
-    gst: String,
-
-    // Nested Sub-Documents
-    accountant1: accountantSchema,     // For firm, LLP, corporate
-    accountant2: accountantSchema,     // For firm, LLP, corporate
-    additionalGST: [gstEntrySchema],   // Array for firm, LLP, corporate
   },
-}, { timestamps: true });
+  additionalGST: [
+    {
+      state: String,
+      gstNo: String,
+    },
+  ],
+});
+const Firm = User.discriminator('Firm', FirmSchema);
 
-module.exports = mongoose.model("User", userSchema);
+// 4. LLP
+const LLPSchema = new Schema({
+  businessName: String,
+  businessPan: String,
+  tanNo: String,
+  gstNo: String,
+  contactNo: String,
+  address: String,
+  accountant1: {
+    name: String,
+    email: String,
+  },
+  additionalGST: [
+    {
+      state: String,
+      gstNo: String,
+    },
+  ],
+});
+const LLP = User.discriminator('LLP', LLPSchema);
+
+// 5. Corporate
+const CorporateSchema = new Schema({
+  businessName: String,
+  businessPan: String,
+  tanNo: String,
+  gstNo: String,
+  address: String,
+  contactNo: String,
+  accountant1: {
+    name: String,
+    email: String,
+  },
+  additionalGST: [
+    {
+      state: String,
+      gstNo: String,
+    },
+  ],
+});
+const Corporate = User.discriminator('Corporate', CorporateSchema);
+
+// Export all models
+module.exports = {
+  User,
+  Individual,
+  Proprietor,
+  Firm,
+  LLP,
+  Corporate,
+};
